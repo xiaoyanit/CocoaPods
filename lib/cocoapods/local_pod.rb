@@ -38,12 +38,10 @@ module Pod
     #
     attr_reader :platform
 
-    # @return [Boolean] Wether or not the pod has been downloaded in the
-    #                   current install process and still needs its docs
-    #                   generated and be cleaned.
-    #
-    attr_accessor :downloaded
-    alias_method :downloaded?, :downloaded
+    attr_accessor :downloader
+    def downloaded?
+      !@downloader.nil?
+    end
 
     # @param [Specification] specification  The first activated specification
     #                                       of the pod.

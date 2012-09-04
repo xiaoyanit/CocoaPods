@@ -11,6 +11,8 @@ module Pod
 
       MAX_CACHE_SIZE = 500
 
+      attr_accessor :current_head_source
+
       def download
         create_cache unless cache_exist?
         puts '-> Cloning git repo' if config.verbose?
@@ -110,6 +112,7 @@ module Pod
 
         clone(clone_url, target_path)
         Dir.chdir(target_path) { git! "submodule update --init"  } if options[:submodules]
+        update_current_head_source
       end
 
       def download_tag
@@ -121,6 +124,7 @@ module Pod
           git! "reset --hard FETCH_HEAD"
           git! "checkout -b activated-pod-commit"
         end
+        update_current_head_source
       end
 
       def download_commit
@@ -129,6 +133,7 @@ module Pod
         Dir.chdir(target_path) do
           git! "checkout -b activated-pod-commit #{options[:commit]}"
         end
+        update_current_head_source
       end
 
       def download_branch
@@ -140,10 +145,18 @@ module Pod
           git! "checkout --track -b activated-pod-commit upstream/#{options[:branch]}" # create a new tracking branch
           puts "Just downloaded and checked out branch: #{options[:branch]} from upstream #{clone_url}" if config.verbose?
         end
+        update_current_head_source
       end
 
       def clone(from, to)
         git! %Q|clone "#{from}" "#{to}"|
+      end
+
+      def update_current_head_source
+        Dir.chdir(target_path) do
+          @current_head_source = { :git => url, :commit => options[:commit] || git('log -n1 --pretty=format:%h') }
+          p @current_head_source
+        end
       end
     end
 

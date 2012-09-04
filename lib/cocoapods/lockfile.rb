@@ -226,8 +226,9 @@ module Pod
     # @return [Hash] The Hash representation of the Lockfile generated from
     #   a given Podfile and the list of resolved Specifications.
     #
-    def self.generate_hash_from_podfile(podfile, specs)
+    def self.generate_hash_from_podfile(podfile, pods)
       hash = {}
+      specs = pods.map(&:specifications).flatten.uniq
 
       # Get list of [name, dependencies] pairs.
       pod_and_deps = specs.map do |spec|
@@ -248,7 +249,24 @@ module Pod
       end
       hash["PODS"] = pod_and_deps
 
-      hash["DEPENDENCIES"] = podfile.dependencies.map{ |d| d.to_s }.sort
+      hash["DEPENDENCIES"] = podfile.dependencies.map(&:to_s).sort
+
+      sources = {}
+      pods.each do |pod|
+        if (downloader = pod.downloader) && downloader.respond_to?(:current_head_source)
+          if pod.top_specification.version.head?
+            sources[pod.name] = downloader.current_head_source
+          end
+        end
+      end
+      podfile.dependencies.select(&:external?).each do |dep|
+        pod = pods.find { |pod| pod.name == dep.name }
+        if (downloader = pod.downloader) && downloader.respond_to?(:current_head_source)
+          sources[pod.name] = downloader.current_head_source
+        end
+      end
+      # TODO sort (a hash is unordered on 1.8.x)
+      hash["SOURCES"] = sources
 
       external_sources = {}
       deps = podfile.dependencies.select(&:external?).sort{ |d, other| d.name <=> other.name}

@@ -200,7 +200,7 @@ module Pod
           downloader.download
           store_podspec(sandbox, target + "#{name}.podspec")
           if local_pod = sandbox.installed_pod_named(name, platform)
-            local_pod.downloaded = true
+            local_pod.downloader = downloader
           end
         end
 
