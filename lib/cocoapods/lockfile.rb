@@ -57,6 +57,10 @@ module Pod
       @external_sources ||= to_hash["EXTERNAL SOURCES"] || {}
     end
 
+    def sources
+      @sources ||= to_hash["SOURCES"] || {}
+    end
+
     # @return [Array<String>] The names of the installed Pods.
     #
     def pods_names
@@ -90,7 +94,7 @@ module Pod
       raise Informative, "Attempt to lock a Pod without an known version." unless version
       dependency = Dependency.new(name, version)
       if external_source = external_sources[name]
-        dependency.external_source = Dependency::ExternalSources.from_params(dependency.name, external_source)
+        dependency.external_source = Dependency::ExternalSource.from_params(dependency.name, external_source)
       end
       dependency
     end
@@ -142,11 +146,17 @@ module Pod
         Dependency.new(name)
       when /from `(.*)'/
         external_source_info = external_sources[name]
+        if source = sources[name]
+          external_source_info = external_source_info.merge(source)
+        end
         Dependency.new(name, external_source_info)
       when /HEAD/
         # @TODO: find a way to serialize from the Downloader the information
         #   necessary to restore a head version.
-        Dependency.new(name, :head)
+        dep = Dependency.new(name, :head)
+        dep.explicit_head_source = sources[name]
+        p dep.explicit_head_source
+        dep
       else
         Dependency.new(name, version)
       end
@@ -184,7 +194,7 @@ module Pod
         dependency = deps_to_install.find { |d| d.name == pod_name }
         deps_to_install.delete(dependency)
         version = pods_versions[pod_name]
-        external_source = Dependency::ExternalSources.from_params(pod_name, external_sources[pod_name])
+        external_source = Dependency::ExternalSource.from_params(pod_name, external_sources[pod_name])
 
         if dependency.nil?
           result[:removed] << pod_name
@@ -253,9 +263,11 @@ module Pod
 
       sources = {}
       pods.each do |pod|
-        if (downloader = pod.downloader) && downloader.respond_to?(:current_head_source)
-          if pod.top_specification.version.head?
+        if pod.top_specification.version.head?
+          if (downloader = pod.downloader) && downloader.respond_to?(:current_head_source)
             sources[pod.name] = downloader.current_head_source
+          else
+            sources[pod.name] = podfile.dependencies.find { |dep| dep.top_level_spec_name == pod.name }.explicit_head_source
           end
         end
       end

@@ -5,6 +5,8 @@ module Pod
 
     attr_reader :head
     alias :head? :head
+    attr_accessor :explicit_head_source
+
     attr_accessor :specification, :external_source
 
     def initialize(*name_and_version_requirements, &block)
@@ -16,7 +18,7 @@ module Pod
       elsif !name_and_version_requirements.empty? && block.nil?
         version = name_and_version_requirements.last
         if name_and_version_requirements.last.is_a?(Hash)
-          @external_source = ExternalSources.from_params(name_and_version_requirements[0].split('/').first, name_and_version_requirements.pop)
+          @external_source = ExternalSource.from_params(name_and_version_requirements[0].split('/').first, name_and_version_requirements.pop)
         elsif version.is_a?(Symbol) && version == :head || version.is_a?(Version) && version.head?
           name_and_version_requirements.pop
           @head = true
@@ -131,7 +133,7 @@ module Pod
       end
     end
 
-    module ExternalSources
+    module ExternalSource
       def self.from_params(name, params)
         return unless name && params
         if params.key?(:git)
