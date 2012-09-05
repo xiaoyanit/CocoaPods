@@ -156,6 +156,10 @@ module Pod
           @name, @params = name, params
         end
 
+        def include_in_lockfile?
+          false
+        end
+
         def specification_from_sandbox(sandbox, platform)
           specification_from_local(sandbox, platform) || specification_from_external(sandbox, platform)
         end
@@ -194,6 +198,10 @@ module Pod
       end
 
       class GitSource < AbstractExternalSource
+        def include_in_lockfile?
+          true
+        end
+
         def copy_external_source_into_sandbox(sandbox, platform)
           puts "-> Pre-downloading: '#{name}'" unless config.silent?
           target = sandbox.root + name

@@ -17,8 +17,8 @@ module Pod
     # @return [Lockfile] Generates a lockfile from a {Podfile} and the
     #   list of {Specifications} that were installed.
     #
-    def self.generate(podfile, specs)
-      Lockfile.new(generate_hash_from_podfile(podfile, specs))
+    def self.generate(podfile, specs, previous_lockfile)
+      Lockfile.new(generate_hash_from_podfile(podfile, specs, previous_lockfile))
     end
 
     # @return [String] The file where this Lockfile is defined.
@@ -236,7 +236,7 @@ module Pod
     # @return [Hash] The Hash representation of the Lockfile generated from
     #   a given Podfile and the list of resolved Specifications.
     #
-    def self.generate_hash_from_podfile(podfile, pods)
+    def self.generate_hash_from_podfile(podfile, pods, previous_lockfile = nil)
       hash = {}
       specs = pods.map(&:specifications).flatten.uniq
 
@@ -261,20 +261,28 @@ module Pod
 
       hash["DEPENDENCIES"] = podfile.dependencies.map(&:to_s).sort
 
-      sources = {}
-      pods.each do |pod|
-        if pod.top_specification.version.head?
-          if (downloader = pod.downloader) && downloader.respond_to?(:current_head_source)
-            sources[pod.name] = downloader.current_head_source
-          else
-            sources[pod.name] = podfile.dependencies.find { |dep| dep.top_level_spec_name == pod.name }.explicit_head_source
-          end
+      # Include sources of pods that are in :head mode.
+      sources_of_pods = pods.select { |pod| pod.top_specification.version.head? }
+      # And those that are installed as an external source from a source that
+      # supports current head info.
+      podfile.dependencies.each do |dep|
+        if dep.external? && dep.external_source.include_in_lockfile?
+          sources_of_pods << pods.find { |pod| pod.name == dep.name }
         end
       end
-      podfile.dependencies.select(&:external?).each do |dep|
-        pod = pods.find { |pod| pod.name == dep.name }
+      sources_of_pods.uniq!
+      sources = {}
+      sources_of_pods.each do |pod|
+        # Get the current head info from the downloader, if it was downloaded
+        # during this installation.
         if (downloader = pod.downloader) && downloader.respond_to?(:current_head_source)
           sources[pod.name] = downloader.current_head_source
+        # Otherwise get it from the previous version of the lockfile.
+        elsif previous_lockfile
+          sources[pod.name] = previous_lockfile.sources[pod.name]
+        else
+          raise "[BUG] No source info found for pod `#{pod.name}' in `HEAD' " \
+                "mode from either a downloader or the previous lockfile."
         end
       end
       # TODO sort (a hash is unordered on 1.8.x)

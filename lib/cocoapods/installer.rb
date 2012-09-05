@@ -137,7 +137,7 @@ module Pod
       project.save_as(@sandbox.project_path)
 
       puts "- Writing lockfile in `#{config.project_lockfile}'\n\n" if config.verbose?
-      @lockfile = Lockfile.generate(@podfile, pods)
+      @lockfile = Lockfile.generate(@podfile, pods, config.lockfile)
       @lockfile.write_to_disk(config.project_lockfile)
 
       UserProjectIntegrator.new(@podfile).integrate! if config.integrate_targets?
