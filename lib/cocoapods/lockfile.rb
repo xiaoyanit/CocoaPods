@@ -146,16 +146,15 @@ module Pod
         Dependency.new(name)
       when /from `(.*)'/
         external_source_info = external_sources[name]
+        # @TODO: Think about supporting installing a specific commit when
+        #        specified as an external :podspec.
         if source = sources[name]
           external_source_info = external_source_info.merge(source)
         end
         Dependency.new(name, external_source_info)
       when /HEAD/
-        # @TODO: find a way to serialize from the Downloader the information
-        #   necessary to restore a head version.
         dep = Dependency.new(name, :head)
         dep.explicit_head_source = sources[name]
-        p dep.explicit_head_source
         dep
       else
         Dependency.new(name, version)

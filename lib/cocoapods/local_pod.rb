@@ -38,10 +38,10 @@ module Pod
     #
     attr_reader :platform
 
+    # @return [Downloader] The downloader that was used to download the pod
+    #                      during this installation and can be used to retrieve
+    #                      the current head source info from.
     attr_accessor :downloader
-    def downloaded?
-      !@downloader.nil?
-    end
 
     # @param [Specification] specification  The first activated specification
     #                                       of the pod.
@@ -143,6 +143,14 @@ module Pod
 
     def local?
       false
+    end
+
+    # @return [Boolean] Wether or not the pod has been downloaded in the
+    #                   current install process and still needs its docs
+    #                   generated and be cleaned.
+    #
+    def downloaded?
+      !@downloader.nil?
     end
 
     # @!group Cleaning
