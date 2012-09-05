@@ -73,7 +73,7 @@ module Pod
     def download_pod(pod)
       downloader = Downloader.for_pod(pod)
       # Force the `bleeding edge' version if necessary.
-      if pod.top_specification.version.head?
+      if pod.top_specification.version.head? && pod.top_specification.explicit_head_source.nil?
         if downloader.respond_to?(:download_head)
           downloader.download_head
         else

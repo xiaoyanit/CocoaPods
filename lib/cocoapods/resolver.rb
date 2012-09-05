@@ -121,7 +121,7 @@ module Pod
       unless @pods_to_install
         if lockfile
           @pods_to_install = specs.select do |spec|
-            spec.version != lockfile.pods_versions[spec.pod_name]
+            spec.version != lockfile.pod_versions[spec.pod_name]
           end.map(&:name)
           if update_mode
             @pods_to_install += specs.select do |spec|
@@ -206,7 +206,12 @@ module Pod
           @cached_specs[spec.name] = spec
           # Configure the specification
           spec.activate_platform(target_definition.platform)
-          spec.version.head = dependency.head?
+          if spec.version.head = dependency.head?
+            # Override the source if this dependency has been locked before.
+            if source = dependency.explicit_head_source
+              spec.explicit_head_source = source
+            end
+          end
           # And recursively load the dependencies of the spec.
           find_dependency_specs(spec, spec.dependencies, target_definition) if spec.dependencies
         end

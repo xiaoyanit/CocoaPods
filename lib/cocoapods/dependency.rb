@@ -18,27 +18,23 @@ module Pod
       elsif !name_and_version_requirements.empty? && block.nil?
         version = name_and_version_requirements.last
         if name_and_version_requirements.last.is_a?(Hash)
-          @external_source = ExternalSource.from_params(name_and_version_requirements[0].split('/').first, name_and_version_requirements.pop)
-        elsif version.is_a?(Symbol) && version == :head || version.is_a?(Version) && version.head?
+          name = name_and_version_requirements[0].split('/').first
+          params = name_and_version_requirements.pop
+          @external_source = ExternalSource.from_params(name, params)
+        elsif version.is_a?(Symbol) && version == :head
           name_and_version_requirements.pop
+          @head = true
+        # Don't remove version requirement from arguments
+        elsif version.is_a?(Version) && version.head?
           @head = true
         end
 
         super(*name_and_version_requirements)
 
-        if head? && !latest_version?
-          raise Informative, "A `:head' dependency may not specify version requirements."
-        end
-
       else
         raise Informative, "A dependency needs either a name and version requirements, " \
                            "a source hash, or a block which defines a podspec."
       end
-    end
-
-    def latest_version?
-      versions = @version_requirements.requirements.map(&:last)
-      versions == [Gem::Version.new('0')]
     end
 
     def ==(other)

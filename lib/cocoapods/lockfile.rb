@@ -74,25 +74,37 @@ module Pod
     #   of the installed Pods as the keys and their corresponding {Version}
     #   as the values.
     #
-    def pods_versions
-      unless @pods_versions
-        @pods_versions = {}
+    def pod_versions
+      unless @pod_versions
+        @pod_versions = {}
         pods.each do |pod|
           pod = pod.keys.first unless pod.is_a?(String)
           name, version = name_and_version_for_pod(pod)
-          @pods_versions[name] = version
+          @pod_versions[name] = version
         end
       end
-      @pods_versions
+      @pod_versions
+    end
+
+    def pod_dependencies
+      unless @pod_dependencies
+        @pod_dependencies = {}
+        pods.each do |pod|
+          pod = pod.keys.first unless pod.is_a?(String)
+          dep = dependency_from_string(pod)
+          @pod_dependencies[dep.name] = dep
+        end
+      end
+      @pod_dependencies
     end
 
     # @return [Dependency] A dependency that describes the exact installed version
     #   of a Pod.
     #
     def dependency_for_installed_pod_named(name)
-      version = pods_versions[name]
-      raise Informative, "Attempt to lock a Pod without an known version." unless version
-      dependency = Dependency.new(name, version)
+      unless dependency = pod_dependencies[name]
+        raise Informative, "Attempt to lock a Pod without an known version."
+      end
       if external_source = external_sources[name]
         dependency.external_source = Dependency::ExternalSource.from_params(dependency.name, external_source)
       end
@@ -126,7 +138,7 @@ module Pod
     #       "libPusher (= 1.0)"
     #       "libPusher (~> 1.0.1)"
     #       "libPusher (> 1.0, < 2.0)"
-    #       "libPusher (HEAD)"
+    #       "libPusher (HEAD based on 1.2.3)"
     #       "libPusher (from `www.example.com')"
     #       "libPusher (defined in Podfile)"
     #       "RestKit/JSON"
@@ -153,7 +165,7 @@ module Pod
         end
         Dependency.new(name, external_source_info)
       when /HEAD/
-        dep = Dependency.new(name, :head)
+        dep = Dependency.new(name, Version.from_string(version.strip))
         dep.explicit_head_source = sources[name]
         dep
       else
@@ -192,7 +204,7 @@ module Pod
       user_installed_pods.each do |pod_name|
         dependency = deps_to_install.find { |d| d.name == pod_name }
         deps_to_install.delete(dependency)
-        version = pods_versions[pod_name]
+        version = pod_versions[pod_name]
         external_source = Dependency::ExternalSource.from_params(pod_name, external_sources[pod_name])
 
         if dependency.nil?

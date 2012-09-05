@@ -10,6 +10,10 @@ module Pod
         v = Version.new($2)
         v.head = true
         v
+      elsif string =~ /HEAD/
+        v = Version.new('0')
+        v.head = true
+        v
       else
         Version.new(string)
       end

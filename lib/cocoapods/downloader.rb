@@ -12,7 +12,7 @@ module Pod
 
     def self.for_pod(pod)
       spec = pod.top_specification
-      for_target(pod.root, spec.source.dup)
+      for_target(pod.root, (spec.explicit_head_source || spec.source).dup)
     end
 
     attr_reader :target_path, :url, :options

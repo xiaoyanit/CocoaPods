@@ -155,7 +155,6 @@ module Pod
       def update_current_head_source
         Dir.chdir(target_path) do
           @current_head_source = { :git => url, :commit => options[:commit] || git('log -n1 --pretty=format:%h') }
-          p @current_head_source
         end
       end
     end

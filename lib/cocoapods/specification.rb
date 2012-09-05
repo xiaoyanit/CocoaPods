@@ -199,6 +199,7 @@ module Pod
 
     top_attr_accessor :defined_in_file
     top_attr_accessor :source
+    top_attr_accessor :explicit_head_source
     top_attr_accessor :homepage
     top_attr_accessor :summary
     top_attr_accessor :documentation
