@@ -1,8 +1,3 @@
-require 'spec_helper/temporary_directory'
-
-# Important
-# Include with temporary directory
-
 module SpecHelper
   def self.tmp_repos_path
     TemporaryRepos.tmp_repos_path
@@ -35,7 +30,7 @@ module SpecHelper
     # Clones a repo to the given name.
     #
     def repo_clone(from_name, to_name)
-      Dir.chdir(tmp_repos_path) { `git clone #{from_name} #{to_name}` }
+      Dir.chdir(tmp_repos_path) { `git clone #{from_name} #{to_name} 2>&1 > /dev/null` }
       repo_path(to_name)
     end
 
@@ -50,7 +45,7 @@ module SpecHelper
       repo_path('master')
     end
 
-    # Sets up a lighweight master repo in `tmp/cocoapods/master` with the
+    # Sets up a lighweight master repo in `tmp/cocoapods/repos/master` with the
     # contents of `spec/fixtures/spec-repos/test_repo`.
     #
     def set_up_test_repo
@@ -62,10 +57,26 @@ module SpecHelper
       repo_make('master')
     end
 
+    def test_old_repo_path
+      repo_path('../master')
+    end
+
+    # Sets up a lighweight master repo in `tmp/cocoapods/master` with the
+    # contents of `spec/fixtures/spec-repos/test_repo`.
+    #
+    def set_up_old_test_repo
+      require 'fileutils'
+      test_old_repo_path.mkpath
+      origin = ROOT + 'spec/fixtures/spec-repos/test_repo/.'
+      destination = tmp_repos_path + '../master'
+      FileUtils.cp_r(origin, destination)
+      repo_make('../master')
+    end
+
     #--------------------------------------#
 
     def tmp_repos_path
-      SpecHelper.temporary_directory + 'cocoapods'
+      SpecHelper.temporary_directory + 'cocoapods/repos'
     end
 
     module_function :tmp_repos_path
@@ -77,4 +88,3 @@ module SpecHelper
     end
   end
 end
-

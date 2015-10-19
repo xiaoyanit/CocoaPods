@@ -5,6 +5,8 @@ Pod::Spec.new do |s|
   s.homepage     = 'http://banana-corp.local/banana-lib.html'
   s.summary      = 'Chunky bananas!'
   s.description  = 'Full of chunky bananas.'
+  s.platform     = :ios
+
   s.source       = { :git => 'http://banana-corp.local/banana-lib.git', :tag => 'v1.0' }
   s.source_files = 'Classes/*.{h,m}', 'Vendor'
   s.xcconfig     = { 'OTHER_LDFLAGS' => '-framework SystemConfiguration' }
@@ -15,12 +17,5 @@ Pod::Spec.new do |s|
     :type => 'MIT',
     :file => 'LICENSE',
     :text => 'Permission is hereby granted ...'
-  }
-  s.documentation = {
-    :html => 'http://banana-corp.local/banana-lib/docs.html',
-    :appledoc => [
-       '--project-company', 'Banana Corp',
-       '--company-id', 'com.banana',
-    ]
   }
 end

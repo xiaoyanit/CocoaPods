@@ -1,128 +1,79 @@
-# CocoaPods – an Objective-C library manager
+![CocoaPods Logo](https://raw.github.com/CocoaPods/shared_resources/master/assets/cocoapods-banner-readme.png)
 
-| CocoaPods | Xcodeproj | Specs |
-| :---: | :---: | :---: |
-[![Master Build Status](https://secure.travis-ci.org/CocoaPods/CocoaPods.png?branch=master)](https://secure.travis-ci.org/CocoaPods/CocoaPods)|[![Build Status](https://secure.travis-ci.org/CocoaPods/Xcodeproj.png?branch=master)](http://travis-ci.org/CocoaPods/Xcodeproj)|[![Build Status](https://secure.travis-ci.org/CocoaPods/Specs.png?branch=master)](http://travis-ci.org/CocoaPods/Specs)
+### CocoaPods: The Cocoa dependency manager
 
+[![Build Status](http://img.shields.io/travis/CocoaPods/CocoaPods/master.svg?style=flat)](https://travis-ci.org/CocoaPods/CocoaPods)
+[![Gem Version](http://img.shields.io/gem/v/cocoapods.svg?style=flat)](http://badge.fury.io/rb/cocoapods)
+[![Code Climate](http://img.shields.io/codeclimate/github/CocoaPods/CocoaPods.svg?style=flat)](https://codeclimate.com/github/CocoaPods/CocoaPods)
 
-CocoaPods manages library dependencies for your Xcode project.
+CocoaPods manages dependencies for your Xcode projects.
 
-Homepage: [http://cocoapods.org/](http://cocoapods.org/)
-Twitter: [@CocoaPods](http://twitter.com/CocoaPods)
-Mailing List: [http://groups.google.com/group/cocoapods](http://groups.google.com/group/cocoapods)
+You specify the dependencies for your project in a simple text file: your `Podfile`. 
+CocoaPods recursively resolves dependencies between libraries, fetches 
+source code for all dependencies, and creates and maintains an Xcode 
+workspace to build your project.
 
-You specify the dependencies for your project in one easy text file. CocoaPods resolves dependencies between libraries, fetches source code for the dependencies, and creates and maintains an Xcode workspace to build your project.
+Installing and updating CocoaPods is very easy. Don't miss the [Installation
+guide](http://guides.cocoapods.org/using/getting-started.html#installation) and the
+[Getting started guide](https://guides.cocoapods.org/using/getting-started.html).
 
-Ultimately, the goal is to improve discoverability of, and engagement in, third party open-source libraries, by creating a more centralized ecosystem.
+## Project Goals
 
-See the [NSScreencast](https://twitter.com/NSScreencast) episode about [using CocoaPods](http://nsscreencast.com/episodes/5-cocoapods) for a quick overview on how to get started or [create a Pod specification](http://nsscreencast.com/episodes/28-creating-a-cocoapod), or [the wiki](https://github.com/CocoaPods/CocoaPods/wiki) for more in depth information on several topics.
+CocoaPods aims to improve the engagement with, and discoverability 
+of, third party open-source Cocoa libraries. These
+project goals influence and drive the design of CocoaPods:
 
-Or, if you’re already using CocoaPods, you can find the changelog [here](https://github.com/CocoaPods/CocoaPods/blob/master/CHANGELOG.md), which contains an overview of the changes in recent versions.
+- Create and share libraries, and use them in your own projects,
+  without creating extra work for library authors. Integrate
+  non-CocoaPods libraries and hack on your own fork of any
+  CocoaPods library with a simple transparent `Podspec` standard.
+- Allow library authors to structure their libraries however they like.
+- Save time for library authors by automating a lot of Xcode work not 
+  related to their libraries' functionality.
+- Support any source management system. (Currently supported are `git`, 
+  `svn`, `mercurial`, `bazaar`, and various types of archives downloaded over HTTP.)
+- Promote a culture of distributed collaboration on pods, but also provide
+  features only possible with a centralised solution to foster a community.
+- Build tools on top of the core Cocoa development system, including those 
+  typically deployed to other operating systems, such as web-services.
+- Provide opinionated and automated integration, but make it completely
+  optional. You may manually integrate your CocoaPods dependencies
+  into your Xcode project as you see fit, with or without a workspace.
+- Solve everyday problems for Cocoa and Xcode developers.
 
+## Sponsors
 
-## Installation
-
-Downloading and installing CocoaPods only takes a few minutes.
-
-CocoaPods runs on [Ruby](http://www.ruby-lang.org/en/). To install it run the following commands:
-
-```
-$ [sudo] gem install cocoapods
-```
-
-If you want to have CocoaPods generate documentation for each library, then install the [appledoc](http://gentlebytes.com/appledoc/) tool:
-
-```
-$ brew install appledoc
-```
-
-Now that you've got CocoaPods installed you can easily add it to your project.
-
-**NOTES**
-
-1. If you're using a fresh out of the box Mac with Lion using Xcode from the Mac App Store, you will need to install the Command Line Tools for Xcode first: [here](https://developer.apple.com/downloads/index.action)  
-Or from `Xcode > Settings > Downloads > Components > Command Line Tools`
-
-2. CocoaPods re-uses some of the RubyGems classes. If you have a version older than 1.4.0, you will have to update RubyGems: `$ gem update --system`.
-
-3. If you use [RVM](https://rvm.io), you might need to create a symbolic link to the LLVM GCC compiler: `$ [sudo] ln -s /usr/bin/llvm-gcc-4.2 /usr/bin/gcc-4.2`
-
-
-## Adding it to your project
-
-Search for Pods by name or description.
-
-```
-$ pod search json
-
---> JSONKit (1.4, 1.5pre)
-    A Very High Performance Objective-C JSON Library.
-    - Homepage: https://github.com/johnezang/JSONKit
-    - Source:   https://github.com/johnezang/JSONKit.git
-
---> SBJson (2.2.3, 3.0.4, 3.1)
-    This library implements strict JSON parsing and generation in Objective-C.
-    - Homepage: http://stig.github.com/json-framework/
-    - Source:   https://github.com/stig/json-framework.git
-```
-
-After you've found your favorite dependencies you add them to your [Podfile](https://github.com/CocoaPods/CocoaPods/wiki/A-Podfile).
-
-```
-$ edit Podfile
-```
-
-```ruby
-platform :ios
-pod 'JSONKit',           '~> 1.4'
-pod 'Reachability',      '~> 2.0.4'
-```
-
-And then you [install the dependencies](https://github.com/CocoaPods/CocoaPods/wiki/Creating-a-project-that-uses-CocoaPods) in your project.
-
-```
-$ pod install
-```
-
-Remember to always open the Xcode workspace instead of the project file when you're building.
-
-```
-$ open App.xcworkspace
-```
-
-Sometimes CocoaPods doesn't have a Pod for one of your dependencies yet. Fortunately [creating a Pod](https://github.com/CocoaPods/CocoaPods/wiki/A-pod-specification) is really easy.
-
-```
-$ pod spec create Peanuts
-$ edit Peanuts.podspec
-$ pod spec lint Peanuts.podspec
-```
-
-Once you've got it running [create a ticket](https://github.com/CocoaPods/CocoaPods/issues) and upload the Pod. If you're familiar with Git you can also fork the [CocoaPods specs](https://github.com/CocoaPods/Specs) repository and send a pull request. We really love contributions!
-
-There are several other ways to start using **any** library without a Pod specification, which can be seen in the [SSCatalog example](https://github.com/CocoaPods/CocoaPods/blob/master/examples/SSCatalog/Podfile).
-
+Lovingly sponsored by a collection of companies, see the footer of [CocoaPods.org](https://cocoapods.org) for an up-to-date list. 
 
 ## Collaborate
 
-All CocoaPods development happens on GitHub, there is a repository for [CocoaPods](https://github.com/CocoaPods/CocoaPods) and one for the [CocoaPods specs](https://github.com/CocoaPods/Specs). Contributing patches or Pods is really easy and gratifying. You even get push access when one of your specs or patches is accepted.
+All CocoaPods development happens on GitHub. Contributions make for good karma and
+we [welcome new](https://blog.cocoapods.org/starting-open-source/) contributors with joy. We take contributors seriously, and thus have a 
+contributor [code of conduct](CODE_OF_CONDUCT.md).
 
-Follow [@CocoaPods](http://twitter.com/CocoaPods) to get up to date information about what's going on in the CocoaPods world.
+## Links
 
+| Link | Description |
+| :----- | :------ |
+[CocoaPods.org](https://cocoapods.org/) | Homepage and search for Pods.
+[@CocoaPods](https://twitter.com/CocoaPods) | Follow CocoaPods on Twitter to stay up to date.
+[Blog](https://blog.cocoapods.org) | The CocoaPods blog.
+[Mailing List](http://groups.google.com/group/cocoapods) | Feel free to ask any kind of question.
+[Guides](https://guides.cocoapods.org) | Everything you want to know about CocoaPods.
+[Changelog](https://github.com/CocoaPods/CocoaPods/blob/master/CHANGELOG.md) | See the changes introduced in each CocoaPods version.
+[New Pods RSS](https://feeds.cocoapods.org/new-pods.rss) | Don't miss any new Pods.
+[Code of Conduct](CODE_OF_CONDUCT.md) | Find out the standards we hold ourselves to.
 
-# Donations
+## Projects
 
-* [@fngtps](http://twitter.com/fngtps) is donating time to work on the design of the forthcoming cocoapods.org website and donated the money to hire [Max Steenbergen](http://twitter.com/maxsteenbergen) to design [an icon](http://drbl.in/cpmL) for it.
-* [@sauspiel](http://twitter.com/Sauspiel) uses CocoaPods for their games and have hired me to add features and specs they needed. These are Nimbus, QuincyKit, and HockeyKit. For the [Nimbus spec](https://github.com/CocoaPods/Specs/blob/master/Nimbus/0.9.0/Nimbus.podspec), the ‘subspecs’ feature was added.
+CocoaPods is composed of the following projects:
 
-# Endorsements
-
-* “I am crazy excited about this. With the growing number of Objective-C libraries, this will make things so much better.” –– [Sam Soffes](http://news.ycombinator.com/item?id=3009154)
-* “Are you doing open source iOS components? You really should support @CocoaPodsOrg!” –– [Matthias Tretter](http://twitter.com/#!/myell0w/status/134955697740840961)
-* “So glad someone has finally done this...” –– [Tom Wilson](http://news.ycombinator.com/item?id=3009349)
-* “Anybody who has tasted the coolness of RubyGems (and @gembundler) understands how cool CocoaPods might be.” –– [StuFF mc](http://twitter.com/#!/stuffmc/status/115374231591731200)
-* “I will be working on getting several of my Objective-C libraries ready for CocoaPods this week!” –– [Luke Redpath](http://twitter.com/#!/lukeredpath/status/115510581921988608)
-* “Really digg how @alloy is building a potential game changer” –– [Klaas Speller](https://twitter.com/#!/spllr/status/115914209438601216)
-* “@alloy's making an Objective-C package manager. This is fantastic news kids!” –– [Josh Abernathy](http://twitter.com/#!/joshaber/status/115273577703555073)
-* “A package manager for Cocoa/Objective-C, built with @MacRuby. Awesomeness!” –– [Johannes Fahrenkrug](http://twitter.com/#!/jfahrenkrug/status/115303240286998528)
-* “This is awesome, I love endorsements!” –– [Appie Durán](http://twitter.com/#!/AppieDuran)
+| Status | Project | Description | Info |
+| :----- | :------ | :--- | :--- |
+| [![Build Status](http://img.shields.io/travis/CocoaPods/CocoaPods/master.svg?style=flat)](http://travis-ci.org/CocoaPods/CocoaPods) | [CocoaPods](https://github.com/CocoaPods/CocoaPods) | The CocoaPods command line tool. | [guides](https://guides.cocoapods.org)
+| [![Build Status](http://img.shields.io/travis/CocoaPods/Core/master.svg?style=flat)](http://travis-ci.org/CocoaPods/Core) | [CocoaPods Core](https://github.com/CocoaPods/Core) | Support for working with specifications and podfiles. | [docs](http://docs.cocoapods.org/cocoapods_core)
+| [![Build Status](http://img.shields.io/travis/CocoaPods/cocoapods-downloader/master.svg?style=flat)](http://travis-ci.org/CocoaPods/cocoapods-downloader) |[CocoaPods Downloader](https://github.com/CocoaPods/cocoapods-downloader) |  Downloaders for various source types. |  [docs](http://docs.cocoapods.org/cocoapods_downloader/index.html)
+| [![Build Status](http://img.shields.io/travis/CocoaPods/Xcodeproj/master.svg?style=flat)](https://travis-ci.org/CocoaPods/Xcodeproj) | [Xcodeproj](https://github.com/CocoaPods/Xcodeproj) | Create and modify Xcode projects from Ruby. |  [docs](http://docs.cocoapods.org/xcodeproj/index.html)
+| [![Build Status](http://img.shields.io/travis/CocoaPods/CLAide/master.svg?style=flat)](https://travis-ci.org/CocoaPods/CLAide) | [CLAide](https://github.com/CocoaPods/CLAide) | A small command-line interface framework.  | [docs](http://docs.cocoapods.org/claide/index.html)
+| [![Build Status](http://img.shields.io/travis/CocoaPods/Molinillo/master.svg?style=flat)](https://travis-ci.org/CocoaPods/Molinillo) | [Molinillo](https://github.com/CocoaPods/Molinillo) | A powerful generic dependency resolver.  | [docs](http://www.rubydoc.info/gems/molinillo)
+|  | [Master Repo ](https://github.com/CocoaPods/Specs) | Master repository of specifications. | [guide](http://docs.cocoapods.org/guides/contributing_to_the_master_repo.html)

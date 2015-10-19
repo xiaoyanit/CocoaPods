@@ -1,18 +1,30 @@
+require 'cocoapods/user_interface/error_report'
+
 module Pod
-  require 'colored'
+  # Provides support for UI output. It provides support for nested sections of
+  # information and for a verbose mode.
+  #
   module UserInterface
+    require 'colored'
 
-    autoload :UIPod, 'cocoapods/user_interface/ui_pod'
-
-    @title_colors      =  %w|yellow green|
+    @title_colors      =  %w( yellow green    )
     @title_level       =  0
     @indentation_level =  2
     @treat_titles_as_messages = false
+    @warnings = []
 
     class << self
       include Config::Mixin
 
-      attr_accessor :indentation_level, :title_level
+      attr_accessor :indentation_level
+      attr_accessor :title_level
+      attr_accessor :warnings
+
+      # @return [Bool] Whether the wrapping of the strings to the width of the
+      #         terminal should be disabled.
+      #
+      attr_accessor :disable_wrap
+      alias_method :disable_wrap?, :disable_wrap
 
       # Prints a title taking an optional verbose prefix and
       # a relative indentation valid for the UI action in the passed
@@ -22,13 +34,23 @@ module Pod
       # to their level. In normal mode titles are printed only if
       # they have nesting level smaller than 2.
       #
-      # TODO: refactor to title (for always visible titles like search)
-      # and sections (titles that reppresent collapsible sections).
+      # @todo Refactor to title (for always visible titles like search)
+      #       and sections (titles that represent collapsible sections).
+      #
+      # @param [String] title
+      #        The title to print
+      #
+      # @param [String] verbose_prefix
+      #        See #message
+      #
+      # @param [FixNum] relative_indentation
+      #        The indentation level relative to the current,
+      #        when the message is printed.
       #
       def section(title, verbose_prefix = '', relative_indentation = 0)
         if config.verbose?
           title(title, verbose_prefix, relative_indentation)
-        elsif title_level < 2
+        elsif title_level < 1
           puts title
         end
 
@@ -39,10 +61,41 @@ module Pod
         self.title_level -= 1
       end
 
-      # A title oposed to a section is always visible
+      # In verbose mode it shows the sections and the contents.
+      # In normal mode it just prints the title.
+      #
+      # @return [void]
+      #
+      def titled_section(title, options = {})
+        relative_indentation = options[:relative_indentation] || 0
+        verbose_prefix = options[:verbose_prefix] || ''
+        if config.verbose?
+          title(title, verbose_prefix, relative_indentation)
+        else
+          puts title
+        end
+
+        self.indentation_level += relative_indentation
+        self.title_level += 1
+        yield if block_given?
+        self.indentation_level -= relative_indentation
+        self.title_level -= 1
+      end
+
+      # A title opposed to a section is always visible
+      #
+      # @param [String] title
+      #        The title to print
+      #
+      # @param [String] verbose_prefix
+      #        See #message
+      #
+      # @param [FixNum] relative_indentation
+      #        The indentation level relative to the current,
+      #        when the message is printed.
       #
       def title(title, verbose_prefix = '', relative_indentation = 2)
-        if(@treat_titles_as_messages)
+        if @treat_titles_as_messages
           message(title, verbose_prefix)
         else
           title = verbose_prefix + title if config.verbose?
@@ -67,7 +120,17 @@ module Pod
       # a relative indentation valid for the UI action in the passed
       # block.
       #
-      # TODO: clean interface.
+      # @todo Clean interface.
+      #
+      # @param [String] message
+      #        The message to print.
+      #
+      # @param [String] verbose_prefix
+      #        See #message
+      #
+      # @param [FixNum] relative_indentation
+      #        The indentation level relative to the current,
+      #        when the message is printed.
       #
       def message(message, verbose_prefix = '', relative_indentation = 2)
         message = verbose_prefix + message if config.verbose?
@@ -84,9 +147,12 @@ module Pod
       #
       # Any title printed in the optional block is treated as a message.
       #
+      # @param [String] message
+      #        The message to print.
+      #
       def info(message)
         indentation = config.verbose? ? self.indentation_level : 0
-        indented = wrap_string(message, " " * indentation)
+        indented = wrap_string(message, indentation)
         puts(indented)
 
         self.indentation_level += 2
@@ -106,95 +172,192 @@ module Pod
         puts("\n[!] #{message}".green)
       end
 
-      # Prints an important warning to the user optionally followed by actions
-      # that the user should take.
-      #
-      # @param [String]  message The message to print.
-      # @param [Array]   actions The actions that the user should take.
-      #
-      # return [void]
-      #
-      def warn(message, actions)
-        puts("\n[!] #{message}".yellow)
-        actions.each do |action|
-          indented = wrap_string(action, "    - ")
-          puts(indented)
-        end
-      end
-
       # Returns a string containing relative location of a path from the Podfile.
-      # The returned path is quoted. If the argument is nit it returns the
+      # The returned path is quoted. If the argument is nil it returns the
       # empty string.
+      #
+      # @param [#to_str] pathname
+      #        The path to print.
       #
       def path(pathname)
         if pathname
-          "`./#{pathname.relative_path_from(config.project_podfile.dirname || Pathname.pwd)}'"
+          from_path = config.podfile_path.dirname if config.podfile_path
+          from_path ||= Pathname.pwd
+          path = Pathname(pathname).relative_path_from(from_path)
+          "`#{path}`"
         else
           ''
         end
       end
 
-      # Prints the textual repprensentation of a given set.
+      # Prints the textual representation of a given set.
+      #
+      # @param  [Set] set
+      #         the set that should be presented.
+      #
+      # @param  [Symbol] mode
+      #         the presentation mode, either `:normal` or `:name_and_version`.
       #
       def pod(set, mode = :normal)
-        if mode == :name
-          puts_indented set.name
+        if mode == :name_and_version
+          puts_indented "#{set.name} #{set.versions.first.version}"
         else
-          pod = UIPod.new(set)
-          title("\n-> #{pod.name} (#{pod.version})".green, '', 1) do
-            puts_indented pod.summary
+          pod = Specification::Set::Presenter.new(set)
+          title = "\n-> #{pod.name} (#{pod.version})"
+          if pod.spec.deprecated?
+            title += " #{pod.deprecation_description}"
+            colored_title = title.red
+          else
+            colored_title = title.green
+          end
+
+          title(colored_title, '', 1) do
+            puts_indented pod.summary if pod.summary
+            puts_indented "pod '#{pod.name}', '~> #{pod.version}'"
             labeled('Homepage', pod.homepage)
             labeled('Source',   pod.source_url)
-            labeled('Versions', pod.verions_by_source)
+            labeled('Versions', pod.versions_by_source)
             if mode == :stats
-              labeled('Pushed',   pod.github_last_activity)
               labeled('Authors',  pod.authors) if pod.authors =~ /,/
               labeled('Author',   pod.authors) if pod.authors !~ /,/
               labeled('License',  pod.license)
               labeled('Platform', pod.platform)
-              labeled('Watchers', pod.github_watchers)
+              labeled('Stars',    pod.github_stargazers)
               labeled('Forks',    pod.github_forks)
             end
-            labeled('Sub specs', pod.subspecs)
+            labeled('Subspecs', pod.subspecs)
           end
         end
       end
 
       # Prints a message with a label.
       #
-      def labeled(label, value)
+      # @param [String] label
+      #        The label to print.
+      #
+      # @param [#to_s] value
+      #        The value to print.
+      #
+      # @param [FixNum] justification
+      #        The justification of the label.
+      #
+      def labeled(label, value, justification = 12)
         if value
-          ''.tap do |t|
-            t << "    - #{label}:".ljust(16)
-            if value.is_a?(Array)
-              separator = "\n      - "
-              puts_indented t << separator << value.join(separator)
-            else
-              puts_indented t << value.to_s << "\n"
+          title = "- #{label}:"
+          if value.is_a?(Array)
+            lines = [wrap_string(title, self.indentation_level)]
+            value.each do |v|
+              lines << wrap_string("- #{v}", self.indentation_level + 2)
             end
+            puts lines.join("\n")
+          else
+            puts wrap_string(title.ljust(justification) + "#{value}", self.indentation_level)
           end
         end
-      end
-
-      # @!group Basic printing
-
-      # Prints a message unless config is silent.
-      #
-      def puts(message = '')
-        super(message) unless config.silent?
       end
 
       # Prints a message respecting the current indentation level and
       # wrapping it to the terminal width if necessary.
       #
+      # @param [String] message
+      #        The message to print.
+      #
       def puts_indented(message = '')
-        indented = wrap_string(message, " " * self.indentation_level)
+        indented = wrap_string(message, self.indentation_level)
         puts(indented)
+      end
+
+      # Prints the stored warnings. This method is intended to be called at the
+      # end of the execution of the binary.
+      #
+      # @return [void]
+      #
+      def print_warnings
+        STDOUT.flush
+        warnings.each do |warning|
+          next if warning[:verbose_only] && !config.verbose?
+          STDERR.puts("\n[!] #{warning[:message]}".yellow)
+          warning[:actions].each do |action|
+            string = "- #{action}"
+            string = wrap_string(string, 4)
+            puts(string)
+          end
+        end
+      end
+
+      # Presents a choice among the elements of an array to the user.
+      #
+      # @param  [Array<#to_s>] array
+      #         The list of the elements among which the user should make his
+      #         choice.
+      #
+      # @param  [String] message
+      #         The message to display to the user.
+      #
+      # @return [Fixnum] The index of the chosen array item.
+      #
+      def choose_from_array(array, message)
+        array.each_with_index do |item, index|
+          UI.puts "#{index + 1}: #{item}"
+        end
+
+        UI.puts message
+
+        index = UI.gets.chomp.to_i - 1
+        if index < 0 || index > array.count - 1
+          raise Informative, "#{index + 1} is invalid [1-#{array.count}]"
+        else
+          index
+        end
+      end
+
+      public
+
+      # @!group Basic methods
+      #-----------------------------------------------------------------------#
+
+      # prints a message followed by a new line unless config is silent.
+      #
+      # @param [String] message
+      #        The message to print.
+      #
+      def puts(message = '')
+        STDOUT.puts(message) unless config.silent?
+      end
+
+      # prints a message followed by a new line unless config is silent.
+      #
+      # @param [String] message
+      #        The message to print.
+      #
+      def print(message)
+        STDOUT.print(message) unless config.silent?
+      end
+
+      # gets input from $stdin
+      #
+      def gets
+        $stdin.gets
+      end
+
+      # Stores important warning to the user optionally followed by actions
+      # that the user should take. To print them use {#print_warnings}.
+      #
+      # @param [String]  message The message to print.
+      # @param [Array]   actions The actions that the user should take.
+      # @param [Bool]    verbose_only
+      #        Restrict the appearance of the warning to verbose mode only
+      #
+      # return [void]
+      #
+      def warn(message, actions = [], verbose_only = false)
+        warnings << { :message => message, :actions => actions, :verbose_only => verbose_only }
       end
 
       private
 
       # @!group Helpers
+      #-----------------------------------------------------------------------#
 
       # @return [String] Wraps a string taking into account the width of the
       # terminal and an option indent. Adapted from
@@ -209,12 +372,48 @@ module Pod
       # @note If CocoaPods is not being run in a terminal or the width of the
       # terminal is too small a width of 80 is assumed.
       #
-      def wrap_string(txt, indent = '')
-        width = `stty size`.split(' ')[1].to_i - indent.length
-        width = 80 unless width >= 10
-        txt.strip.gsub(/(.{1,#{width}})( +|$)\n?|(.{#{width}})/, indent + "\\1\\3\n")
+      def wrap_string(string, indent = 0)
+        if disable_wrap
+          (' ' * indent) + string
+        else
+          first_space = ' ' * indent
+          indented = CLAide::Command::Banner::TextWrapper.wrap_with_indent(string, indent, 9999)
+          first_space + indented
+        end
       end
     end
   end
   UI = UserInterface
+
+  #---------------------------------------------------------------------------#
+
+  # Redirects cocoapods-core UI.
+  #
+  module CoreUI
+    class << self
+      def puts(message)
+        UI.puts message
+      end
+
+      def warn(message)
+        UI.warn message
+      end
+    end
+  end
+end
+
+#---------------------------------------------------------------------------#
+
+module Xcodeproj
+  # Redirects xcodeproj UI.
+  #
+  module UserInterface
+    def self.puts(message)
+      ::Pod::UI.puts message
+    end
+
+    def self.warn(message)
+      ::Pod::UI.warn message
+    end
+  end
 end

@@ -1,14 +1,11 @@
 recipe :ruby
 
-Kicker::Recipes::Ruby.runner_bin = 'bacon'
+Kicker::Recipes::Ruby.runner_bin = 'bacon --quiet'
 
 process do |files|
   specs = files.take_and_map do |file|
     if file =~ %r{lib/cocoapods/(.+?)\.rb$}
       s = Dir.glob("spec/**/#{File.basename(file, '.rb')}_spec.rb")
-      if file =~ %r{lib/cocoapods/installer.*\.rb$}
-        s.concat(['spec/unit/installer_spec.rb', 'spec/unit/installer/target_installer_spec.rb'])
-      end
       s.uniq unless s.empty?
     end
   end
